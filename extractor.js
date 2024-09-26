@@ -9,9 +9,8 @@ const URL =
 const diplomado = "#j_idt16\\:j_idt107\\:0\\:_t110";
 const diplomadosSelector = '[id^="j_idt16:j_idt107:"][id$=":_t110"]';
 /**#############################################################*/
-let categoriaBuscar =
-  "DIPLOMADO EN POLITICAS DE GESTION JUDICIAL, ADMINISTRATIVA Y PROYECTOS";
-const selectorPagina = "#j_idt16\\:j_idt68\\:0\\:_t70";
+let categoriaBuscar = "Biologia";
+const selectorPagina = "#j_idt16\\:j_idt68\\:1\\:_t70";
 
 /**#############################################################*/
 const librosSelector = "[id^='j_idt16:j_idt49:'][id$=':_t55']";
@@ -52,9 +51,6 @@ const crearDirectorioSiNoExiste = (directorio) => {
 //Funcion para capturar y guardar la imagen
 const capturarImagen = async (page, directorioDestino, pagina) => {
   try {
-    //Esperar a que no haya mas solicitudes de red activas (incluidas imagenes)
-    await page.waitForLoadState("networkidle");
-
     await page.waitForSelector(".documentPageView img", { timeout: 10000 });
     const imagen = await page.$(".documentPageView img");
     const imagenBuffer = await imagen.screenshot();
@@ -167,9 +163,16 @@ const extractor = async () => {
 
         //extraer los libros----------------------
         for (let i = 0; i < titulosLibros.length; i++) {
-          //volver a entrar a la categoria
+          //Crear un nuevo navegador para cada iteracion (libro)
+          const browser = await chromium.launch({ headless: false });
+          const page = await browser.newPage();
+
           try {
-            if (i !== 0) {
+            //Navegar a la pagina principal
+            await page.goto(URL, { waitUntil: "networkidle" });
+
+            //volver a entrar a la categoria
+            try {
               console.log("Librooooo");
               //hace click en la categoria indicada
               await page.waitForSelector(
@@ -182,84 +185,93 @@ const extractor = async () => {
 
               // Espera opcional para ver el resultado
               await page.waitForTimeout(3000);
-            }
-          } catch (error) {
-            console.log(error);
-          }
-
-          //extraer las imagenes de los libros
-          try {
-            const selectorLibro = `#j_idt16\\:j_idt49\\:${i}\\:_t55`;
-
-            await page.waitForSelector(selectorLibro, {
-              timeout: 10000,
-            });
-            await page.click(selectorLibro);
-
-            // Espera opcional para ver el resultado
-            await page.waitForTimeout(3000);
-
-            //----------------------------------------
-            // Obtener el total de páginas
-
-            await page.waitForSelector("#j_idt130\\:_t142");
-            const textoTotalPaginas = await page.textContent(
-              "#j_idt130\\:_t142"
-            );
-            const match = textoTotalPaginas.match(/\d+/);
-            const totalPaginas = match ? parseInt(match[0], 10) : 0;
-            console.log(`Total de páginas: ${totalPaginas}`);
-
-            //****** Ruta al escritorio en Windows
-            const nombreCarpetaLimpio = limpiarNombreArchivo(categoriaBuscar);
-            const escritorio = path.join(
-              process.env.USERPROFILE,
-              "Desktop",
-              nombreCarpetaLimpio
-            );
-            const tituloLimpio = limpiarNombreArchivo(titulosLibros[i]);
-
-            const directorioDestino = crearDirectorioSiNoExiste(
-              path.join(
-                process.env.USERPROFILE,
-                "Desktop",
-                nombreCarpetaLimpio,
-                tituloLimpio
-              )
-            );
-
-            // Iterar sobre el número total de páginas
-            for (let i = 1; i <= totalPaginas; i++) {
-              await capturarImagen(page, directorioDestino, i);
-
-              // Navegar a la siguiente página si es necesario
-              if (i < totalPaginas) {
-                await page.waitForSelector("#j_idt130\\:_t144", {
-                  timeout: 10000,
-                });
-                await page.click("#j_idt130\\:_t144");
-                await page.waitForTimeout(3000); //Ajusta el tiempo segun sea necesario
-              }
+            } catch (error) {
+              console.log(error);
             }
 
-            //Cerrar el libro
-            await page.waitForSelector("#j_idt167\\:_t168", { timeout: 10000 });
-            await page.click("#j_idt167\\:_t168");
-          } catch (error) {
-            console.error("No se encontro el libro: ", error);
-
-            //Cerrar el modal 'Error del sistema'
+            //extraer las imagenes de los libros
             try {
-              await page.waitForSelector(".modal-footer ", { timeout: 10000 });
-              await page.click(
-                '.modal-footer .btn.btn-default[data-dismiss="modal"]'
-              );
+              const selectorLibro = `#j_idt16\\:j_idt49\\:${i}\\:_t55`;
+
+              await page.waitForSelector(selectorLibro, {
+                timeout: 10000,
+              });
+              await page.click(selectorLibro);
 
               // Espera opcional para ver el resultado
-              await page.waitForTimeout(4000);
+              await page.waitForTimeout(3000);
+
+              //----------------------------------------
+              // Obtener el total de páginas
+
+              await page.waitForSelector("#j_idt130\\:_t142");
+              const textoTotalPaginas = await page.textContent(
+                "#j_idt130\\:_t142"
+              );
+              const match = textoTotalPaginas.match(/\d+/);
+              const totalPaginas = match ? parseInt(match[0], 10) : 0;
+              console.log(`Total de páginas: ${totalPaginas}`);
+
+              //****** Ruta al escritorio en Windows
+              const nombreCarpetaLimpio = limpiarNombreArchivo(categoriaBuscar);
+              const escritorio = path.join(
+                process.env.USERPROFILE,
+                "Desktop",
+                nombreCarpetaLimpio
+              );
+              const tituloLimpio = limpiarNombreArchivo(titulosLibros[i]);
+
+              const directorioDestino = crearDirectorioSiNoExiste(
+                path.join(
+                  process.env.USERPROFILE,
+                  "Desktop",
+                  nombreCarpetaLimpio,
+                  tituloLimpio
+                )
+              );
+
+              // Iterar sobre el número total de páginas
+              for (let i = 1; i <= totalPaginas; i++) {
+                await capturarImagen(page, directorioDestino, i);
+
+                // Navegar a la siguiente página si es necesario
+                if (i < totalPaginas) {
+                  await page.waitForSelector("#j_idt130\\:_t144", {
+                    timeout: 10000,
+                  });
+                  await page.click("#j_idt130\\:_t144");
+                  await page.waitForTimeout(3000); //Ajusta el tiempo segun sea necesario
+                }
+              }
+
+              //Cerrar el libro
+              await page.waitForSelector("#j_idt167\\:_t168", {
+                timeout: 10000,
+              });
+              await page.click("#j_idt167\\:_t168");
             } catch (error) {
-              console.error(error);
+              console.error("No se encontro el libro: ", error);
+
+              //Cerrar el modal 'Error del sistema'
+              try {
+                await page.waitForSelector(".modal-footer ", {
+                  timeout: 10000,
+                });
+                await page.click(
+                  '.modal-footer .btn.btn-default[data-dismiss="modal"]'
+                );
+
+                // Espera opcional para ver el resultado
+                await page.waitForTimeout(3000);
+              } catch (error) {
+                console.error(error);
+              }
             }
+          } catch (error) {
+            console.error("Error en el proceso de scraping:", error);
+          } finally {
+            //Cerrar el navegador en cada libro
+            await browser.close();
           }
         }
         //Salir de la categoria
