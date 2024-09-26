@@ -9,7 +9,8 @@ const URL =
 const diplomado = "#j_idt16\\:j_idt107\\:0\\:_t110";
 const diplomadosSelector = '[id^="j_idt16:j_idt107:"][id$=":_t110"]';
 /**#############################################################*/
-let categoriaBuscar = "Biologia";
+let categoriaBuscar =
+  "DIPLOMADO EN POLITICAS DE GESTION JUDICIAL, ADMINISTRATIVA Y PROYECTOS";
 const selectorPagina = "#j_idt16\\:j_idt68\\:1\\:_t70";
 
 /**#############################################################*/
@@ -188,6 +189,20 @@ const extractor = async () => {
             } catch (error) {
               console.log(error);
             }
+
+            /***** ###### Explorar # paginas cambiar el digito  ###### ****** */
+            try {
+              await page.waitForSelector(selectorPagina, {
+                timeout: 10000,
+              });
+              await page.click(selectorPagina);
+
+              // Espera opcional para ver el resultado
+              await page.waitForTimeout(3000);
+            } catch (error) {
+              console.log(error);
+            }
+            /***** ###### ###################### ###### ****** */
 
             //extraer las imagenes de los libros
             try {
